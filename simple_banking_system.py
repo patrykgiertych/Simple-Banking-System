@@ -84,7 +84,4 @@ class CreditCard:
         print('Bye')
         quit()
 
-
-
-
 CreditCard.main_menu()
