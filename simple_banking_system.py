@@ -103,7 +103,7 @@ class CreditCard:
         self.cur.execute(f'select number, pin, balance from card where number={number}')
         self.conn.commit()
         info = self.cur.fetchone()
-        print('\n1. Balance\n2. Add income\n3. Log out\n0. Exit\n')
+        print('\n1. Balance\n2. Add income\n3. Do transfer\n4. Log out\n0. Exit\n')
         user = input()
         if user == '1':
             print(f'Balance: {info[2]}')
@@ -111,6 +111,8 @@ class CreditCard:
         elif user == '2':
             self.add_income(number)
         elif user == '3':
+            self.transfer(number)
+        elif user == '4':
             print('You have successfully logged out!')
             self.main_menu()
         elif user == '0':
@@ -130,6 +132,40 @@ class CreditCard:
         self.cur.execute(f'update card set balance=balance+{income} where number={number}')
         self.conn.commit()
         self.logged_in(number)
+    
+    # transfer cash method
+    def transfer(self, from_number):
+        print('Enter card number:')
+        transfer_to = input()
+        self.cur.execute(f'select * from card where number={transfer_to}')
+        self.conn.commit()
+        info = self.cur.fetchone()
+        if info == 0:
+            print("Such a card doesn't exist")
+        else:
+            print('Enter how much money you want to transfer:')
+            transfer = int(input())
+            self.cur.execute(f'select balance from card where number={from_number}')
+            self.conn.commit()
+            balance = self.cur.fetchone()
+            balance = balance[0]
+            if transfer > balance:
+                print('Not enough money!')
+                self.logged_in(from_number)
+            else:
+                self.cur.execute(f'select balance from card where number={from_number}')
+                self.conn.commit()
+                balance = self.cur.fetchone()
+                balance = balance[0] - transfer
+                self.cur.execute(f'update card set balance={balance} where number={from_number}')
+                self.conn.commit()
+                self.cur.execute(f'select balance from card where number={transfer_to}')
+                self.conn.commit()
+                balance = self.cur.fetchone()
+                balance = balance[0] + transfer
+                self.cur.execute(f'update card set balance=balance+{transfer} where number={transfer_to}')
+                self.conn.commit()
+                self.logged_in(from_number)
         
 
 
