@@ -103,7 +103,7 @@ class CreditCard:
         self.cur.execute(f'select number, pin, balance from card where number={number}')
         self.conn.commit()
         info = self.cur.fetchone()
-        print('\n1. Balance\n2. Add income\n3. Do transfer\n4. Log out\n0. Exit\n')
+        print('\n1. Balance\n2. Add income\n3. Do transfer\n4. Close account\n5. Log out\n0. Exit\n')
         user = input()
         if user == '1':
             print(f'Balance: {info[2]}')
@@ -113,6 +113,8 @@ class CreditCard:
         elif user == '3':
             self.transfer(number)
         elif user == '4':
+            self.delete_card(number)
+        elif user == '5':
             print('You have successfully logged out!')
             self.main_menu()
         elif user == '0':
@@ -167,7 +169,11 @@ class CreditCard:
                 self.conn.commit()
                 self.logged_in(from_number)
         
-
+    # delete account method
+    def delete_card(self, number):
+        self.cur.execute(f'delete from card where number={number}')
+        self.conn.commit()
+        self.main_menu()
 
 ATM = CreditCard()
 ATM.main_menu()
