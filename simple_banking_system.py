@@ -18,10 +18,7 @@ class CreditCard:
  
     # insert credit card info into db
     def card_insert(self, num, pin_):
-<<<<<<< HEAD
         pin_ = str(pin_)
-=======
->>>>>>> bebba5c0cb053a05cbe939c5ab51657a0bffedba
         self.cur.execute(f'insert into card (number, pin) values ({num}, {pin_})')
         self.conn.commit()
  
@@ -181,12 +178,4 @@ class CreditCard:
 
 ATM = CreditCard()
 ATM.main_menu()
-<<<<<<< HEAD
 
-
-
-
-
-
-=======
->>>>>>> bebba5c0cb053a05cbe939c5ab51657a0bffedba
