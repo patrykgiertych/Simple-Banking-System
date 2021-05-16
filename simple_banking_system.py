@@ -1,94 +1,183 @@
 import random
+import sqlite3
+
 
 class CreditCard:
-    card_id = None
-    card_pin = None
-    balance = 0
-
-    def create_id():
-        CreditCard.card_id = '400000'
-        while len(CreditCard.card_id) < 15:
-            CreditCard.card_id += str(random.randint(0,9))
+    def __init__(self, number = None, pin = None, balance = 0 ):
+        self.number = self.create_number
+        self.pin = self.create_pin
+        self.balance = balance
+        self.conn = sqlite3.connect('card.s3db')
+        self.cur = self.conn.cursor()
+        self.create_db()
+ 
+    # create a db method
+    def create_db(self):
+        self.cur.execute('CREATE TABLE IF NOT EXISTS card (id integer not null primary key, number TEXT, pin TEXT, balance INTEGER DEFAULT 0);')
+        self.conn.commit()
+ 
+    # insert credit card info into db
+    def card_insert(self, num, pin_):
+        pin_ = str(pin_)
+        self.cur.execute(f'insert into card (number, pin) values ({num}, {pin_})')
+        self.conn.commit()
+ 
+    # check credentials 
+    def db_check(self, num, pin):
+        self.cur.execute(f"select number, pin from card where number={num}")
+        self.cred = self.cur.fetchone()
+        self.conn.commit()
+        if pin == self.cred[1]:
+            return True
+        else:
+            return False
+  
+    # generate credit card number with luhn algorithm 
+    def create_number(self):
+        self.number = '400000'
+        while len(self.number) < 15:
+            self.number += str(random.randint(0,9))
         count = 1
-        multiplied = []
         minus= []
-        for i in CreditCard.card_id:
+        count = 1
+        for i in self.number:
             if count % 2 != 0:
                 i = int(i) * 2
-                multiplied.append(i)
+                if int(i) > 9:
+                    i = int(i) - 9
+                minus.append(i)
             else:
-                multiplied.append(i)
+                minus.append(i)
             count += 1
-        for i in multiplied:
-            if int(i) > 9:
-                i = int(i) - 9
-                minus.append(i)
-            else:
-                minus.append(i)
         digits_sum = sum([int(i) for i in minus])
         if digits_sum % 10 == 0:
-            CreditCard.card_id += '0'
+            self.number += '0'
         else:
             rem = digits_sum % 10
             checksum = 10 - rem
-            CreditCard.card_id += str(checksum)
-
-    def create_pin():
-        CreditCard.card_pin = ''
-        while len(CreditCard.card_pin) < 4:
-            CreditCard.card_pin += str(random.randint(0,9))
+            self.number += str(checksum)
+        return self.number
     
-    def create_credit_card():
-        CreditCard.create_id()
-        CreditCard.create_pin()
-        print('Your card has been created')
-        print(f'Your card number:\n{CreditCard.card_id}')
-        print(f'Your card pin:\n{CreditCard.card_pin}')
-        CreditCard.main_menu()
+    # generate credit card pin
+    def create_pin(self):
+        self.pin = ''
+        while len(self.pin) < 4:
+            self.pin += str(random.randint(0,9))
+        return self.pin
 
-    def main_menu():
+    # merged create_number, create_pin, card_insert  
+    def create_credit_card(self):
+        number = self.create_number()
+        pin = self.create_pin()
+        self.card_insert(number, pin)
+        print('Your card has been created')
+        print(f'Your card number:\n{number}')
+        print(f'Your card pin:\n{pin}')
+        self.main_menu()
+
+    # main menu
+    def main_menu(self):
         print('1. Create an account\n2. Log into account\n0. Exit\n')
         user = input()   
         if user == '1':
-            CreditCard.create_credit_card()
+            self.create_credit_card()
         elif user == '2':
-            CreditCard.login()
+            self.login()
         elif user == '0':
-            CreditCard.exit()
+            self.exit()
     
-    def login():
+    # nav method
+    def login(self):
         print('Enter your card number:')
         card_number = input()
         print('Enter your PIN:')
         card_pin = input()
-        if card_number == CreditCard.card_id and card_pin == CreditCard.card_pin:
+        if self.db_check(card_number,card_pin):
             print('You have successfully logged in!\n')
-            CreditCard.logged_in()
+            self.logged_in(card_number)
         else:
             print('Wrong card number or PIN!')
-            CreditCard.main_menu()
-
-    def logged_in():
-        print('\n1. Balance\n2. Log out\n0. Exit\n')
+            self.main_menu()
+    
+    # nav method
+    def logged_in(self, number):
+        self.cur.execute(f'select number, pin, balance from card where number={number}')
+        self.conn.commit()
+        info = self.cur.fetchone()
+        print('\n1. Balance\n2. Add income\n3. Do transfer\n4. Close account\n5. Log out\n0. Exit\n')
         user = input()
         if user == '1':
-            print(f'Balance: {CreditCard.balance}')
-            CreditCard.logged_in()
+            print(f'Balance: {info[2]}')
+            self.logged_in(number)
         elif user == '2':
+            self.add_income(number)
+        elif user == '3':
+            self.transfer(number)
+        elif user == '4':
+            self.delete_card(number)
+        elif user == '5':
             print('You have successfully logged out!')
-            CreditCard.main_menu()
+            self.main_menu()
         elif user == '0':
-            CreditCard.exit()
-
-    def exit():
+            self.exit()
+    
+    # nav method
+    def exit(self):
         print('Bye')
+        self.conn.close()
         quit()
 
+    # add income method
+    def add_income(self, number):
+        print('Enter income:')
+        income = int(input())
+        print('Income was added!')
+        self.cur.execute(f'update card set balance=balance+{income} where number={number}')
+        self.conn.commit()
+        self.logged_in(number)
+    
+    # transfer cash method
+    def transfer(self, from_number):
+        print('Enter card number:')
+        transfer_to = input()
+        self.cur.execute(f'select * from card where number={transfer_to}')
+        self.conn.commit()
+        info = self.cur.fetchone()
+        if info == 0:
+            print("Such a card doesn't exist")
+        else:
+            print('Enter how much money you want to transfer:')
+            transfer = int(input())
+            self.cur.execute(f'select balance from card where number={from_number}')
+            self.conn.commit()
+            balance = self.cur.fetchone()
+            balance = balance[0]
+            if transfer > balance:
+                print('Not enough money!')
+                self.logged_in(from_number)
+            else:
+                self.cur.execute(f'select balance from card where number={from_number}')
+                self.conn.commit()
+                balance = self.cur.fetchone()
+                balance = balance[0] - transfer
+                self.cur.execute(f'update card set balance={balance} where number={from_number}')
+                self.conn.commit()
+                self.cur.execute(f'select balance from card where number={transfer_to}')
+                self.conn.commit()
+                balance = self.cur.fetchone()
+                balance = balance[0] + transfer
+                self.cur.execute(f'update card set balance=balance+{transfer} where number={transfer_to}')
+                self.conn.commit()
+                self.logged_in(from_number)
+        
+    # delete account method
+    def delete_card(self, number):
+        self.cur.execute(f'delete from card where number={number}')
+        self.conn.commit()
+        self.main_menu()
 
-
-
-CreditCard.main_menu()
-
+ATM = CreditCard()
+ATM.main_menu()
 
 
 
